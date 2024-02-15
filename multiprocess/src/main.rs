@@ -6,7 +6,7 @@ use std::{
 use worker::Worker;
 mod worker;
 
-const ITERATIONS_OF_WORK: i32 = 64;
+const ITERATIONS_OF_WORK: i32 = 128;
 
 fn main() {
     testing_wrapper(test_single, "Single".to_string());
@@ -31,15 +31,16 @@ fn test_single() {
 fn test_multi() {
     let max_thread_count = 8;
     let mut worker_threads = Vec::new();
-    let mut work_sending_channels = Vec::new();
+    let mut job_sending_channels = Vec::new();
     let mut ready_signals = Vec::new();
 
     for _ in 0..max_thread_count {
-        let (work_sender, work_receiver) = mpsc::channel();
+        let (job_sender, job_receiver) = mpsc::channel();
         let (ready_sender, ready_receiver) = mpsc::channel();
-        work_sending_channels.push(work_sender);
+        
+        job_sending_channels.push(job_sender);
         ready_signals.push(ready_receiver);
-        let mut new_worker = Worker::new(work_receiver, ready_sender);
+        let mut new_worker = Worker::new(job_receiver, ready_sender);
         worker_threads.push(thread::spawn(move || new_worker.run()));
     }
 
@@ -48,7 +49,7 @@ fn test_multi() {
     while work_left > 0 {
         for i in 0..max_thread_count {
             if let Ok(_) = ready_signals[i].try_recv() {
-                match work_sending_channels[i].send(busy_work) {
+                match job_sending_channels[i].send(busy_work) {
                     Ok(_) => work_left -= 1,
                     Err(_) => break,
                 }
@@ -56,7 +57,7 @@ fn test_multi() {
         }
     }
 
-    drop(work_sending_channels);
+    drop(job_sending_channels);
     for handle in worker_threads {
         handle.join().unwrap();
     }
