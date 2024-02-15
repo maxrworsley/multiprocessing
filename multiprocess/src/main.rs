@@ -1,9 +1,16 @@
-use std::{thread, time::{Duration, Instant}};
+use std::{
+    sync::mpsc, thread, time::{
+        Duration, 
+        Instant}};
 
-const ITERATIONS_OF_WORK: i32 = 8;
+use worker::Worker;
+mod worker;
+
+const ITERATIONS_OF_WORK: i32 = 64;
 
 fn main() {
-    testing_wrapper(test_single, "Single".to_string())
+    testing_wrapper(test_single, "Single".to_string());
+    testing_wrapper(test_multi, "Multi".to_string());
 }
 
 fn testing_wrapper(f: fn() -> (), name: String) {
@@ -22,19 +29,36 @@ fn test_single() {
 }
 
 fn test_multi() {
-    // let mut thread_pool = Vec::new();
     let max_thread_count = 8;
+    let mut worker_threads = Vec::new();
+    let mut work_sending_channels = Vec::new();
+    let mut ready_signals = Vec::new();
+
+    for _ in 0..max_thread_count {
+        let (work_sender, work_receiver) = mpsc::channel();
+        let (ready_sender, ready_receiver) = mpsc::channel();
+        work_sending_channels.push(work_sender);
+        ready_signals.push(ready_receiver);
+        let mut new_worker = Worker::new(work_receiver, ready_sender);
+        worker_threads.push(thread::spawn(move || new_worker.run()));
+    }
 
     let mut work_left = ITERATIONS_OF_WORK;
-    let current_thread_count = 0;
-    // Use mpsc channels to hand work to threads
-    // Will need channels both ways - one for work and one for ready signal
     
     while work_left > 0 {
-        let thread_deficit = max_thread_count - current_thread_count;
-        for _ in 0..thread_deficit {
-            // Push work to channels
-        }        
+        for i in 0..max_thread_count {
+            if let Ok(_) = ready_signals[i].try_recv() {
+                match work_sending_channels[i].send(busy_work) {
+                    Ok(_) => work_left -= 1,
+                    Err(_) => break,
+                }
+            }
+        }
+    }
+
+    drop(work_sending_channels);
+    for handle in worker_threads {
+        handle.join().unwrap();
     }
 }
 
