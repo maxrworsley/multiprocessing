@@ -1,7 +1,7 @@
 from multiprocessing import Pool
 import timeit
 
-ITERATIONS_OF_WORK = 1
+ITERATIONS_OF_WORK = 128
 
 def busy_work(input):
     x = 0
@@ -19,7 +19,8 @@ def test_single():
 
 if __name__ == '__main__':
     test_iterations = 1
-    print("Multi: ", end="")
-    print(timeit.timeit("test_multi()", setup="from __main__ import test_multi", number=test_iterations))
     print("Single: ", end="")
     print(timeit.timeit("test_single()", setup="from __main__ import test_single", number=test_iterations))
+    print("Multi: ", end="")
+    print(timeit.timeit("test_multi()", setup="from __main__ import test_multi", number=test_iterations))
+   

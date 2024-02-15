@@ -17,7 +17,7 @@ fn testing_wrapper(f: fn() -> (), name: String) {
     let start = Instant::now();
     f();
     let duration_seconds = start.elapsed().as_secs();
-    let duration_milli = start.elapsed().as_nanos();
+    let duration_milli = start.elapsed().subsec_nanos();
 
     println!("{}: {:?}.{:?}", name, duration_seconds, duration_milli);
 }
@@ -37,7 +37,7 @@ fn test_multi() {
     for _ in 0..max_thread_count {
         let (job_sender, job_receiver) = mpsc::channel();
         let (ready_sender, ready_receiver) = mpsc::channel();
-        
+
         job_sending_channels.push(job_sender);
         ready_signals.push(ready_receiver);
         let mut new_worker = Worker::new(job_receiver, ready_sender);
