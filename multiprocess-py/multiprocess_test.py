@@ -5,7 +5,7 @@ ITERATIONS_OF_WORK = 8
 
 def busy_work(input):
     x = 0
-    for i in range(1_000_0000):
+    for i in range(10_000_000):
         x += i
     return x
 
