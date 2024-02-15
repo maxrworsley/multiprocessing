@@ -18,3 +18,5 @@ venv/
 
 # Python build artifacts
 *.egg-info/
+
+.DS_Store
