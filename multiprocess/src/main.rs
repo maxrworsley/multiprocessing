@@ -1,12 +1,13 @@
 use std::{
-    sync::mpsc, thread, time::{
-        Duration, 
-        Instant}};
+    sync::mpsc, 
+    thread, 
+    time::Instant,
+    cmp::min};
 
 use worker::Worker;
 mod worker;
 
-const ITERATIONS_OF_WORK: i32 = 128;
+const ITERATIONS_OF_WORK: usize = 128;
 
 fn main() {
     testing_wrapper(test_single, "Single".to_string());
@@ -34,7 +35,8 @@ fn test_multi() {
     let mut job_sending_channels = Vec::new();
     let mut ready_signals = Vec::new();
 
-    for _ in 0..max_thread_count {
+    let cores_needed = min(max_thread_count, ITERATIONS_OF_WORK);
+    for _ in 0..cores_needed {
         let (job_sender, job_receiver) = mpsc::channel();
         let (ready_sender, ready_receiver) = mpsc::channel();
 
@@ -47,7 +49,7 @@ fn test_multi() {
     let mut work_left = ITERATIONS_OF_WORK;
     
     while work_left > 0 {
-        for i in 0..max_thread_count {
+        for i in 0..cores_needed {
             if let Ok(_) = ready_signals[i].try_recv() {
                 match job_sending_channels[i].send(busy_work) {
                     Ok(_) => work_left -= 1,
